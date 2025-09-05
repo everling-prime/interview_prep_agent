@@ -38,26 +38,18 @@ class WebResearcher:
         )
     
     async def _scrape_company_website(self, domain: str) -> Dict[str, str]:
-        """Comprehensive website scraping for company intelligence"""
+        """Lightweight website scraping for company intelligence"""
         import requests
         from bs4 import BeautifulSoup
         import time
         
-        # Comprehensive list of pages to try for maximum company intelligence
+        # Small, predictable set of canonical pages for a simple demo
         pages_to_scrape = [
             f"https://{domain}",           # Homepage
             f"https://{domain}/about",      # About page
-            f"https://{domain}/about-us",   # Alternative about
-            f"https://{domain}/company",    # Company page
-            f"https://{domain}/team",       # Team page
+            f"https://{domain}/company",    # Company page (alt)
             f"https://{domain}/careers",    # Careers page
-            f"https://{domain}/jobs",       # Alternative careers
-            f"https://{domain}/news",       # News/press
-            f"https://{domain}/press",      # Press releases
-            f"https://{domain}/blog",       # Company blog
-            f"https://{domain}/culture",    # Company culture
-            f"https://{domain}/mission",    # Mission page
-            f"https://{domain}/values",     # Values page
+            f"https://{domain}/blog",       # Blog (optional)
         ]
         
         scraped_content = {}
@@ -76,7 +68,7 @@ class WebResearcher:
         max_attempts = 5
         attempts = 0
         successful_scrapes = 0
-        max_pages = 5  # Limit to 5 successful scrapes for comprehensive but reasonable coverage
+        max_pages = 4  # Keep coverage lean for a demo
         
         for url in pages_to_scrape:
             if attempts >= max_attempts or successful_scrapes >= max_pages:
@@ -99,19 +91,12 @@ class WebResearcher:
                     for script in soup(["script", "style", "nav", "footer", "header", "aside"]):
                         script.decompose()
                     
-                    # Extract main content - try different common selectors
+                    # Extract main content - keep selectors simple
                     main_content = None
                     content_selectors = [
                         'main',
                         '[role="main"]',
-                        '.main-content',
-                        '.content',
-                        '.page-content',
                         'article',
-                        '.container',
-                        '.about-content',
-                        '.company-info',
-                        '.hero-section'
                     ]
                     
                     for selector in content_selectors:
@@ -132,8 +117,8 @@ class WebResearcher:
                         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
                         text = ' '.join(chunk for chunk in chunks if chunk)
                         
-                        # Limit content length but allow more for key pages
-                        content_limit = 3000 if any(page in url for page in ['/about', '/company', '/mission']) else 2000
+                        # Limit content length but allow a bit more for about/company
+                        content_limit = 2500 if any(page in url for page in ['/about', '/company']) else 1800
                         text = text[:content_limit]
                         
                         if text and len(text) > 100:  # Ensure we got meaningful content

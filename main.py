@@ -48,12 +48,10 @@ def print_demo_highlights(email_insights, web_research=None):
     if web_research:
         # Show web research intelligence
         print(f"\n🔍 WEB RESEARCH INTELLIGENCE:")
-        search_count = len(web_research.search_results) if web_research.search_results else 0
         website_count = len(web_research.website_content) if web_research.website_content else 0
-        print(f"   Executed strategic search queries")
-        print(f"   📊 Gathered {search_count} relevant search results")
+        print(f"   Focused on company website analysis")
         print(f"   🌐 Scraped {website_count} key company pages")
-        print(f"   ✨ Agent focused on recent news and culture for interview relevance")
+        print(f"   ✨ Prioritized about/company, careers, and blog pages")
     
     print(f"\n🧠 AI SYNTHESIS INTELLIGENCE:")
     print(f"   ✨ Agent acting as expert interview coach with 20+ years experience")
@@ -102,7 +100,7 @@ Examples:
         # Initialize configuration and components
         print("⚙️  Initializing configuration...")
         config = Config()
-        email_analyzer = EmailAnalyzer(config)
+        email_analyzer = EmailAnalyzer(config, debug=args.debug)
         web_researcher = WebResearcher(config, debug=args.debug)
         
         # Step 1: Analyze emails from company
@@ -140,7 +138,7 @@ Examples:
         except Exception as e:
             print(f"⚠️  AI coach unavailable ({str(e)}), falling back to basic report...")
             # Fallback to basic report if OpenAI fails
-            prep_report = create_fallback_report(args.company, email_insights, web_research)
+            prep_report = prep_coach._create_fallback_report(args.company, email_insights, web_research)
         
         # Step 4: Save the report
         doc_info = None
@@ -169,7 +167,7 @@ Examples:
         print("✅ Interview Prep Analysis Complete!")
         print(f"📊 Email Analysis: {email_insights.total_emails} total emails, {len(email_insights.interview_related)} interview-related")
         if web_research:
-            print(f"🔍 Web Research: {len(web_research.search_results)} search results, {len(web_research.website_content)} pages scraped")
+            print(f"🔍 Web Research: {len(web_research.website_content)} pages scraped")
         
         # Report location info
         if doc_info and 'url' in doc_info:
@@ -200,65 +198,7 @@ Examples:
             print("💡 For Google Docs integration, ensure you have proper authentication")
         return 1
 
-def create_fallback_report(company: str, email_insights, web_research=None) -> str:
-    """Create a basic fallback report if AI coaching fails"""
-    report = f"""# Interview Prep Report - {company.upper()}
-*Generated on {datetime.now().strftime('%Y-%m-%d at %H:%M:%S')}*
-*AI coaching unavailable - basic analysis provided*
-
-## Executive Summary
-
-Based on analysis of {email_insights.total_emails} emails and {len(web_research.search_results) if web_research else 0} research sources for {company}.
-
-## Email Analysis Results
-
-- **Total emails analyzed**: {email_insights.total_emails}
-- **Interview-relevant emails**: {len(email_insights.interview_related)}
-- **Key contacts identified**: {len(email_insights.important_contacts)}
-
-"""
-    
-    # Add key findings
-    if email_insights.interview_related:
-        report += "## Interview Communications Found\n\n"
-        for email in email_insights.interview_related[:3]:
-            report += f"- **{email.get('subject', 'N/A')}** from {email.get('sender', 'N/A')}\n"
-    else:
-        report += "## No Direct Interview Communications\n\nConsider reaching out to confirm interview process details.\n\n"
-    
-    # Add web research if available
-    if web_research and web_research.search_results:
-        report += "## Recent Company News\n\n"
-        for result in web_research.search_results[:5]:
-            if result.get('title') and result.get('snippet'):
-                report += f"- **{result['title']}**\n"
-                report += f"  {result['snippet'][:100]}...\n\n"
-    
-    # Add contacts
-    if email_insights.important_contacts:
-        report += "## Key Contacts\n\n"
-        for contact in email_insights.important_contacts[:3]:
-            # Handle both dict and object formats for contacts
-            if hasattr(contact, 'get'):
-                name = contact.get('name', 'Unknown')
-                subject = contact.get('subject', 'N/A')
-            else:
-                name = getattr(contact, 'name', getattr(contact, 'email', 'Unknown'))
-                subject = getattr(contact, 'subject', 'N/A')
-            report += f"- **{name}** - {subject}\n"
-    
-    report += """
-## Basic Recommendations
-
-1. Review the communications above for process details
-2. Research the company's recent developments mentioned
-3. Prepare specific examples that align with company values
-4. Follow up on any pending communications
-
-*For detailed AI-powered insights, please check your OpenAI API configuration.*
-"""
-    
-    return report
+## Deprecated fallback removed; use PrepCoach._create_fallback_report
 
 def save_report(company: str, report: str, output_dir: str) -> str:
     """Save the prep report to a file"""

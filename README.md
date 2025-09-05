@@ -63,7 +63,6 @@ Required variables loaded in `config.py`:
 
 - `ARCADE_API_KEY` – Arcade API key (for Gmail/Google Docs tool access)
 - `OPENAI_API_KEY` – OpenAI key for AI report generation
-- `FIRECRAWL_API_KEY` – Reserved for future crawling, currently required by Config
 
 ## Usage
 
@@ -88,10 +87,19 @@ uv run python main.py --company openai.com --user-id you@example.com --debug
 uv run python main.py --company stripe.com --user-id you@example.com --save-to-docs
 ```
 
+## Demo
+
+- Quick run script: `bash scripts/demo.sh <company_domain> <user_email> [--debug] [--save-to-docs]`
+- Examples:
+  - `bash scripts/demo.sh arcade.dev you@example.com --debug`
+  - `bash scripts/demo.sh stripe.com you@example.com --save-to-docs`
+- Optional: make it executable and run directly: `chmod +x scripts/demo.sh && ./scripts/demo.sh arcade.dev you@example.com`
+
 ## Notes on web research
 
-- The web researcher attempts at most 5 URLs per domain and caps at 5 successful scrapes, prioritizing common pages like `/about`, `/company`, `/mission`, etc.
-- Pages returning 404s are skipped gracefully; scraping continues until the cap is hit.
+- The web researcher focuses on a small set of canonical pages: the homepage plus `/about` or `/company`, `/careers`, and `/blog` (if present).
+- For a simpler demo, external search is disabled; the intelligence is derived from these pages.
+- 404s and minor parsing issues are skipped gracefully.
 
 ## Output
 
@@ -107,5 +115,5 @@ uv run python main.py --company stripe.com --user-id you@example.com --save-to-d
 ## Troubleshooting
 
 - Import errors: ensure you run from the repository root and that `uv sync` (or `pip install`) completed successfully.
-- Missing keys: `config.py` requires `ARCADE_API_KEY`, `OPENAI_API_KEY`, and `FIRECRAWL_API_KEY`.
-- Google Docs failures: verify Arcade auth in the console logs and that your account has Drive access.
+- Missing keys: `config.py` requires `ARCADE_API_KEY` and `OPENAI_API_KEY`.
+- Google Docs: the first run will prompt Arcade authorization in your terminal; approve once and retry.

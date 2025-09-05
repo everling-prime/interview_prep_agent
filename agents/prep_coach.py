@@ -23,7 +23,7 @@ class PrepCoach:
         self.arcade_client = Arcade(api_key=config.arcade_api_key) if Arcade else None
     
     async def create_prep_report(self, company: str, email_insights: EmailInsight, 
-                               web_research: WebResearch) -> str:
+                               web_research: Optional[WebResearch] = None) -> str:
         """
         Create comprehensive interview preparation report using OpenAI
         """
@@ -86,46 +86,10 @@ class PrepCoach:
             if self.debug:
                 print(f"🔧 Creating document with title: {doc_title}")
             
-            # Use Arcade's GoogleDocs toolkit to create a document
-            # First, get the available GoogleDocs tools
-            toolkits_response = await asyncio.to_thread(
-                self.arcade_client.tools.list,
-                toolkit="googledocs"
-            )
-            
+            # Use Arcade's GoogleDocs CreateDocumentFromText tool directly for simplicity
+            full_tool_name = "GoogleDocs.CreateDocumentFromText"
             if self.debug:
-                print(f"🔧 Available GoogleDocs tools: {[tool.name for tool in toolkits_response.items] if hasattr(toolkits_response, 'items') else toolkits_response}")
-            
-            # Find the create document tool - prioritize CreateDocumentFromText
-            create_tool_name = None
-            tools = toolkits_response.items if hasattr(toolkits_response, 'items') else toolkits_response
-            
-            # First, look specifically for CreateDocumentFromText since we have content
-            for tool in tools:
-                tool_name = tool.name if hasattr(tool, 'name') else tool
-                if tool_name == "CreateDocumentFromText":
-                    create_tool_name = tool_name
-                    break
-            
-            # If not found, look for other create tools
-            if not create_tool_name:
-                for tool in tools:
-                    tool_name = tool.name if hasattr(tool, 'name') else tool
-                    if "create" in tool_name.lower() and ("document" in tool_name.lower() or "doc" in tool_name.lower()):
-                        create_tool_name = tool_name
-                        break
-                
-            if not create_tool_name:
-                raise Exception("No GoogleDocs create tool found in Arcade")
-            
-            if self.debug:
-                print(f"🔧 Using tool: {create_tool_name}")
-            
-            # Add toolkit prefix if needed
-            full_tool_name = f"GoogleDocs.{create_tool_name}" if not create_tool_name.startswith("GoogleDocs.") else create_tool_name
-            
-            if self.debug:
-                print(f"🔧 Using full tool name: {full_tool_name}")
+                print(f"🔧 Using GoogleDocs tool: {full_tool_name}")
             
             # Authorize the tool for the user
             auth_result = await asyncio.to_thread(
@@ -159,7 +123,6 @@ class PrepCoach:
             
             if self.debug:
                 print(f"✅ Google Doc created successfully: {doc_title}")
-                print(f"🔧 Execution result: {execution_result}")
             
             # Return the document info
             doc_info = {
@@ -173,15 +136,15 @@ class PrepCoach:
             if hasattr(execution_result, 'output') and execution_result.output:
                 output = execution_result.output
                 if isinstance(output, dict):
-                    # Look for document ID in various possible fields
-                    doc_id = (output.get('documentId') or 
-                             output.get('document_id') or 
-                             output.get('id'))
+                    doc_id = (
+                        output.get('documentId') or
+                        output.get('document_id') or
+                        output.get('id')
+                    )
                     if doc_id:
                         doc_info["document_id"] = doc_id
                         doc_info["url"] = f"https://docs.google.com/document/d/{doc_id}/edit"
                 elif isinstance(output, str) and "docs.google.com" in output:
-                    # If the output contains a Google Docs URL directly
                     doc_info["url"] = output
             
             # Also check if the result itself contains the document info
@@ -200,7 +163,7 @@ class PrepCoach:
             raise Exception(error_msg)
     
     def _build_coach_prompt(self, company: str, email_insights: EmailInsight, 
-                           web_research: WebResearch) -> str:
+                           web_research: Optional[WebResearch] = None) -> str:
         """Build the comprehensive coaching prompt for OpenAI"""
         
         # Format email insights
@@ -302,8 +265,10 @@ Make this highly specific to {company} and this candidate's situation. Use actua
         
         return "\n".join(insights) if insights else "Limited email communication data available."
     
-    def _format_web_research(self, web_research: WebResearch) -> str:
+    def _format_web_research(self, web_research: Optional[WebResearch]) -> str:
         """Format web research for the prompt"""
+        if not web_research:
+            return "Limited company research data available."
         summary = []
         
         # Search results summary
@@ -329,13 +294,15 @@ Make this highly specific to {company} and this candidate's situation. Use actua
         return "\n".join(summary) if summary else "Limited company research data available."
     
     def _create_fallback_report(self, company: str, email_insights: EmailInsight, 
-                              web_research: WebResearch) -> str:
+                              web_research: Optional[WebResearch] = None) -> str:
         """Create a basic fallback report if OpenAI fails"""
+        search_sources_count = len(web_research.search_results) if (web_research and web_research.search_results) else 0
+        website_pages_count = len(web_research.website_content) if (web_research and web_research.website_content) else 0
         return f"""# Interview Preparation Report - {company.upper()}
 *AI-generated report unavailable - basic analysis provided*
 
 ## Summary
-Based on analysis of {email_insights.total_emails} emails and {len(web_research.search_results)} research sources for {company}.
+Based on analysis of {email_insights.total_emails} emails and {search_sources_count} research sources for {company}.
 
 ## Email Analysis
 - Total communications: {email_insights.total_emails}
@@ -343,8 +310,8 @@ Based on analysis of {email_insights.total_emails} emails and {len(web_research.
 - Key contacts: {len(email_insights.important_contacts)}
 
 ## Research Findings
-- Search results analyzed: {len(web_research.search_results)}
-- Website pages reviewed: {len(web_research.website_content)}
+- Search results analyzed: {search_sources_count}
+- Website pages reviewed: {website_pages_count}
 
 ## Recommendations
 1. Review the email communications for process details

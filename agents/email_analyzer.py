@@ -9,9 +9,10 @@ from config import Config
 class EmailAnalyzer:
     """Analyzes emails from company domain to extract interview-relevant insights"""
     
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, debug: bool = False):
         self.config = config
         self.client = Arcade(api_key=config.arcade_api_key)
+        self.debug = debug
     
     async def analyze_company_emails(self, company_domain: str, user_id: str) -> EmailInsight:
         """
@@ -51,7 +52,8 @@ class EmailAnalyzer:
     async def _search_company_emails(self, domain: str, user_id: str) -> List[CompanyEmail]:
         """Search Gmail using SearchThreads to filter for domain-specific emails directly"""
         try:
-            print(f"🔐 Starting Gmail authorization for user: {user_id}")
+            if self.debug:
+                print(f"🔐 Starting Gmail authorization for user: {user_id}")
             
             # Authorization
             auth_response = await asyncio.to_thread(
@@ -61,7 +63,8 @@ class EmailAnalyzer:
                 scopes=["https://www.googleapis.com/auth/gmail.readonly"]
             )
             
-            print(f"🔐 Auth response status: {auth_response.status}")
+            if self.debug:
+                print(f"🔐 Auth response status: {auth_response.status}")
             
             if auth_response.status != "completed":
                 print(f"🔐 Authorization required. Please visit: {auth_response.url}")
@@ -69,7 +72,8 @@ class EmailAnalyzer:
                     self.client.auth.wait_for_completion, 
                     auth_response
                 )
-                print(f"🔐 Auth completion status: {auth_response.status}")
+                if self.debug:
+                    print(f"🔐 Auth completion status: {auth_response.status}")
             
             if auth_response.status == "completed":
                 print("✅ Gmail access authorized successfully")
@@ -77,7 +81,8 @@ class EmailAnalyzer:
                 raise Exception(f"Authorization failed with status: {auth_response.status}")
             
             # Use Gmail.SearchThreads with sender parameter to filter by domain
-            print(f"📧 Searching for threads from {domain} using Gmail SearchThreads...")
+            if self.debug:
+                print(f"📧 Searching for threads from {domain} using Gmail SearchThreads...")
             
             result = await asyncio.to_thread(
                 self.client.tools.execute,
@@ -86,12 +91,14 @@ class EmailAnalyzer:
                 input={"sender": f"@{domain}", "max_results": 20}  # Filter by sender domain
             )
             
-            print(f"📧 SearchThreads response type: {type(result)}")
+            if self.debug:
+                print(f"📧 SearchThreads response type: {type(result)}")
             
             # Parse the ExecuteToolResponse correctly
             if hasattr(result, 'output') and hasattr(result.output, 'value'):
                 threads_data = result.output.value.get('threads', [])
-                print(f"📧 Found {len(threads_data)} threads from {domain}")
+                if self.debug:
+                    print(f"📧 Found {len(threads_data)} threads from {domain}")
             else:
                 print(f"📧 Unexpected response format: {result}")
                 return []
@@ -99,10 +106,11 @@ class EmailAnalyzer:
             # Process the filtered threads
             company_emails = await self._process_domain_filtered_threads(threads_data, domain, user_id)
             
-            if company_emails:
-                print(f"✅ Successfully found {len(company_emails)} emails from {domain}")
-            else:
-                print(f"❌ No emails from {domain} found in search results")
+            if self.debug:
+                if company_emails:
+                    print(f"✅ Successfully found {len(company_emails)} emails from {domain}")
+                else:
+                    print(f"❌ No emails from {domain} found in search results")
                 
             return company_emails
             
@@ -116,19 +124,23 @@ class EmailAnalyzer:
         company_emails = []
         
         if not threads_data:
-            print(f"📧 No threads found for domain {domain}")
+            if self.debug:
+                print(f"📧 No threads found for domain {domain}")
             return company_emails
         
-        print(f"📧 Processing {len(threads_data)} domain-filtered threads from {domain}...")
+        if self.debug:
+            print(f"📧 Processing {len(threads_data)} domain-filtered threads from {domain}...")
         
         for i, thread_info in enumerate(threads_data):
             try:
                 thread_id = thread_info.get('id')
                 if not thread_id:
-                    print(f"⚠️  Thread {i} missing ID, skipping...")
+                    if self.debug:
+                        print(f"⚠️  Thread {i} missing ID, skipping...")
                     continue
                 
-                print(f"  📧 Processing thread {i+1}/{len(threads_data)}: {thread_id}")
+                if self.debug:
+                    print(f"  📧 Processing thread {i+1}/{len(threads_data)}: {thread_id}")
                 
                 # Get full thread details
                 thread_details = await asyncio.to_thread(
@@ -144,7 +156,8 @@ class EmailAnalyzer:
                 elif isinstance(thread_details, dict):
                     thread_data = thread_details
                 else:
-                    print(f"    ⚠️  Unexpected thread format for {thread_id}")
+                    if self.debug:
+                        print(f"    ⚠️  Unexpected thread format for {thread_id}")
                     continue
                 
                 # Extract email information
@@ -161,12 +174,15 @@ class EmailAnalyzer:
                         thread_data=thread_data
                     )
                     company_emails.append(email)
-                    print(f"    ✓ Found email from {domain}: {email.subject[:50]}...")
+                    if self.debug:
+                        print(f"    ✓ Found email from {domain}: {email.subject[:50]}...")
                 else:
-                    print(f"    ⚠️  Thread sender doesn't match domain: {sender}")
+                    if self.debug:
+                        print(f"    ⚠️  Thread sender doesn't match domain: {sender}")
                     
             except Exception as e:
-                print(f"⚠️  Error processing thread {i}: {str(e)}")
+                if self.debug:
+                    print(f"⚠️  Error processing thread {i}: {str(e)}")
                 continue
         
         return company_emails
@@ -314,7 +330,8 @@ class EmailAnalyzer:
             
             if any(keyword in content_lower for keyword in interview_keywords):
                 relevant_emails.append(email)
-                print(f"  ✓ Interview-related: {email.subject[:50]}...")
+                if self.debug:
+                    print(f"  ✓ Interview-related: {email.subject[:50]}...")
         
         return relevant_emails
     
