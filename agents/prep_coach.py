@@ -286,10 +286,10 @@ Make this highly specific to {company} and this candidate's situation. Use actua
                 summary.append(f"- {page.title()} page: {content[:150]}...")
         
         # Structured info
-        if web_research.structured_info and web_research.structured_info.recent_developments:
-            summary.append(f"\n**Key Recent Developments:**")
-            for dev in web_research.structured_info.recent_developments[:3]:
-                summary.append(f"- {dev[:100]}...")
+        if web_research.structured_info and web_research.structured_info.recent_news:
+            summary.append(f"\n**Recent Company News:**")
+            for news in web_research.structured_info.recent_news[:3]:
+                summary.append(f"- {news[:100]}...")
         
         return "\n".join(summary) if summary else "Limited company research data available."
     

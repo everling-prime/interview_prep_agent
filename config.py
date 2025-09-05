@@ -4,8 +4,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-#print(f"ARCADE_API_KEY (first/last 6): {os.getenv('ARCADE_API_KEY')[:6]}...{os.getenv('ARCADE_API_KEY')[-6:]}")
-
 @dataclass
 class Config:
     """Configuration for the Interview Prep Agent"""
@@ -27,12 +25,10 @@ class Config:
     max_tokens: int = 2000
     
     def __init__(self):
-        self.arcade_api_key = self._get_env_var("ARCADE_API_KEY")
-        self.openai_api_key = self._get_env_var("OPENAI_API_KEY")
-    
-    @staticmethod
-    def _get_env_var(name: str) -> str:
-        value = os.getenv(name)
-        if not value:
-            raise ValueError(f"Environment variable {name} is required")
-        return value
+        self.arcade_api_key = os.getenv("ARCADE_API_KEY")
+        self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        
+        if not self.arcade_api_key:
+            raise ValueError("ARCADE_API_KEY environment variable is required")
+        if not self.openai_api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is required")

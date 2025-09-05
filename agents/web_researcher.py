@@ -54,14 +54,9 @@ class WebResearcher:
         
         scraped_content = {}
         
-        # Set up headers to appear more like a real browser
+        # Simple browser headers
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
         }
         
         # Limit total URL attempts per domain (not just successful scrapes)
@@ -91,34 +86,16 @@ class WebResearcher:
                     for script in soup(["script", "style", "nav", "footer", "header", "aside"]):
                         script.decompose()
                     
-                    # Extract main content - keep selectors simple
-                    main_content = None
-                    content_selectors = [
-                        'main',
-                        '[role="main"]',
-                        'article',
-                    ]
-                    
-                    for selector in content_selectors:
-                        main_content = soup.select_one(selector)
-                        if main_content:
-                            break
-                    
-                    # If no main content found, use body
-                    if not main_content:
-                        main_content = soup.find('body')
+                    # Extract main content - try main first, then body
+                    main_content = soup.find('main') or soup.find('body')
                     
                     if main_content:
                         # Extract text and clean it up
                         text = main_content.get_text(separator=' ', strip=True)
                         
-                        # Clean up whitespace
-                        lines = (line.strip() for line in text.splitlines())
-                        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-                        text = ' '.join(chunk for chunk in chunks if chunk)
-                        
-                        # Limit content length but allow a bit more for about/company
-                        content_limit = 2500 if any(page in url for page in ['/about', '/company']) else 1800
+                        # Clean up whitespace and limit length
+                        text = ' '.join(text.split())
+                        content_limit = 2000 if any(page in url for page in ['/about', '/company']) else 1500
                         text = text[:content_limit]
                         
                         if text and len(text) > 100:  # Ensure we got meaningful content
@@ -168,11 +145,7 @@ class WebResearcher:
         
         return CompanyInfo(
             mission=website_content.get('about', '')[:500] or website_content.get('home', '')[:500],
-            recent_news=recent_news,
-            culture_values=[],  # Will be enhanced with LLM later
-            key_products=[],    # Will be enhanced with LLM later
-            recent_developments=recent_news[:5],
-            team_info={}
+            recent_news=recent_news
         )
     
     @staticmethod

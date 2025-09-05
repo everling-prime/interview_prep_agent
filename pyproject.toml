@@ -1,7 +1,7 @@
 [project]
 name = "interview-prep-agent"
 version = "0.1.0"
-description = "Add your description here"
+description = "Interview Prep Agent with Arcade.dev"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

@@ -33,31 +33,20 @@ def print_demo_highlights(email_insights, web_research=None):
     """Print key highlights for demo purposes"""
     print("\n" + "🎯 AGENTIC INTELLIGENCE HIGHLIGHTS" + "\n" + "=" * 50)
     
-    # Show intelligent email decisions
-    if email_insights and email_insights.interview_related:
-        print(f"📧 EMAIL INTELLIGENCE:")
-        print(f"   Found {email_insights.total_emails} total emails from company")
-        print(f"   ✨ Agent identified {len(email_insights.interview_related)} as interview-relevant")
-        print(f"   🎯 Key insight: Agent prioritized hiring communication over routine emails")
-    elif email_insights and email_insights.total_emails > 0:
-        print(f"📧 EMAIL INTELLIGENCE:")
-        print(f"   Found {email_insights.total_emails} total emails from company")
-        print(f"   ✨ Agent analyzed content but found no interview-specific communications")
-        print(f"   🎯 Shows intelligent filtering - job alerts ≠ interview communications")
+    # Email intelligence summary
+    if email_insights:
+        interview_count = len(email_insights.interview_related) if email_insights.interview_related else 0
+        print(f"📧 EMAIL: Found {email_insights.total_emails} emails, {interview_count} interview-relevant")
+        if interview_count > 0:
+            print(f"   ✨ Agent intelligently filtered hiring communications from routine emails")
     
+    # Web research summary  
     if web_research:
-        # Show web research intelligence
-        print(f"\n🔍 WEB RESEARCH INTELLIGENCE:")
         website_count = len(web_research.website_content) if web_research.website_content else 0
-        print(f"   Focused on company website analysis")
-        print(f"   🌐 Scraped {website_count} key company pages")
-        print(f"   ✨ Prioritized about/company, careers, and blog pages")
+        print(f"🔍 WEB: Scraped {website_count} key company pages (about, careers, blog)")
     
-    print(f"\n🧠 AI SYNTHESIS INTELLIGENCE:")
-    print(f"   ✨ Agent acting as expert interview coach with 20+ years experience")
-    print(f"   🎯 Connecting email context with company intelligence using AI")
-    print(f"   📝 Creating personalized coaching advice, not generic templates")
-    print(f"   🤖 OpenAI GPT analyzing patterns and generating strategic recommendations")
+    # AI synthesis summary
+    print(f"🧠 AI: Expert interview coach synthesizing personalized recommendations")
     print("=" * 50)
 
 async def main():

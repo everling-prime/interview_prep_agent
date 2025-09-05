@@ -24,10 +24,6 @@ class CompanyInfo:
     """Structured company information"""
     mission: str
     recent_news: List[str]
-    culture_values: List[str]
-    key_products: List[str]
-    recent_developments: List[str]
-    team_info: Dict[str, Any]
 
 @dataclass
 class WebResearch:
