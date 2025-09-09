@@ -26,3 +26,6 @@ coverage.xml
 *.log
 
 .env
+
+# Local OAuth credentials/tokens for examples
+credentials/

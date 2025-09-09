@@ -475,7 +475,7 @@ interview_prep_agent/
 ├── .env.example                  # Example environment file
 ├── .gitignore                    # Git ignore rules
 ├── README.md                     # Project documentation
-├── SETUP_INSTRUCTIONS.md         # This file
+├── BUILD_INSTRUCTIONS.md         # Build/setup instructions
 ├── config.py                     # Configuration management
 ├── main.py                       # Main entry point
 ├── pyproject.toml               # Project dependencies
