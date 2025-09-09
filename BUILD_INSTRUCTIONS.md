@@ -428,6 +428,43 @@ bash scripts/demo.sh arcade.dev you@example.com --debug
 4. Create a new API key
 5. Add to your `.env` file
 
+## Step 11: Optional — Add Arcade Docs to Your AI IDE (Context7 MCP)
+
+If your AI IDE supports the Model Context Protocol (MCP), you can add the Context7 MCP so your assistant can reference the latest arcade.dev documentation directly inside your IDE.
+
+What you’ll need:
+- An IDE or assistant that supports MCP (e.g., many AI IDEs/assistants now support adding MCP servers).
+- The Context7 MCP server installed (follow the Context7 installation guide for your OS).
+- A Context7 account/API key if required by your setup.
+
+Setup steps:
+1. Install the Context7 MCP server using the official installer or package for your platform.
+2. Open your AI IDE’s MCP configuration and add a new server entry for Context7.
+3. Provide the command/path to the Context7 MCP server binary and, if applicable, set `CONTEXT7_API_KEY` in the server’s environment.
+4. In the Context7 configuration, add/select the Arcade documentation source so queries include `arcade.dev` docs.
+5. Restart your IDE/assistant and test by asking a docs question (e.g., “Show Arcade Gmail tools capabilities”).
+
+Example (generic MCP client config):
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "/path/to/context7-mcp", 
+      "args": [],
+      "env": {
+        "CONTEXT7_API_KEY": "your_context7_api_key_if_required"
+      },
+      "disabled": false
+    }
+  }
+}
+```
+
+Notes:
+- Exact install commands, binary names, and config file locations vary by IDE. Refer to your IDE’s MCP docs and the Context7 setup guide for precise steps.
+- Ensure you explicitly enable the Arcade docs/library/source within Context7 so your assistant can reference `arcade.dev` documentation.
+- You can disable or remove the MCP server anytime from your IDE’s settings.
+
 ## Project Structure Overview
 
 After following these instructions, your project structure should look like:
