@@ -16,7 +16,7 @@ interview_prep_agent/
 ├── agents/
 │   ├── email_analyzer.py
 │   ├── web_researcher.py
-│   └── prep_coach.py
+│   ├── prep_coach.py
 │   └── discovery.py
 ├── models/
 │   └── data_models.py
@@ -25,13 +25,10 @@ interview_prep_agent/
 ├── tools/
 │   ├── gmail.py
 │   ├── firecrawl.py
-│   ├── search.py
 │   └── executor.py
 ├── utils/
 │   ├── logging.py
-│   ├── validators.py
-│   ├── auth.py
-│   └── schema.py
+│   └── validators.py
 ├── config.py
 ├── main.py
 ├── pyproject.toml
@@ -46,11 +43,10 @@ interview_prep_agent/
   - `web_researcher.py`: Orchestrates discovery and scraping to get canonical company pages.
   - `discovery.py`: Merges Firecrawl site mapping + Google search, then uses an LLM to pick the best URLs (about/team/careers).
 - Tools:
-  - `gmail.py`, `firecrawl.py`, `search.py`: Thin wrappers over Arcade toolkits with uniform execution + logging via `executor.py`.
+  - `gmail.py`, `firecrawl.py`: Thin wrappers over Arcade toolkits with uniform execution + logging via `executor.py`.
 - Utils:
   - `logging.py`: Structured JSON logs with `run_id`, `step`, `tool`, `outcome`, `duration_ms` (+extra).
   - `validators.py`: URL/domain sanitation and normalization.
-  - `auth.py`: Client factories for Arcade and OpenAI.
 - Agent Loop:
   - Explicit perceive → decide → act (tool) → reflect → next, with structured logs at each step.
 

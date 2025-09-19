@@ -54,6 +54,8 @@ class EventLogger:
                 return False
 
             def result(self, outcome: str, extra: Optional[Dict[str, Any]] = None):
+                end = time.perf_counter()
+                self._duration_ms = int((end - self._start) * 1000)
                 logger.log(step, tool, outcome=outcome, duration_ms=self._duration_ms, extra=extra)
 
         return _Timer()

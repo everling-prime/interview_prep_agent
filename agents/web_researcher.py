@@ -57,6 +57,22 @@ class WebResearcher:
     @staticmethod
     def _domain_to_company_name(domain: str) -> str:
         """Convert domain to likely company name"""
-        name = domain.replace('.com', '').replace('.org', '').replace('.net', '')
-        name = name.replace('www.', '')
-        return name.replace('-', ' ').replace('_', ' ').title()
+        cleaned = (domain or "").strip().lower()
+        if cleaned.startswith("http://") or cleaned.startswith("https://"):
+            cleaned = cleaned.split("//", 1)[-1]
+        if ":" in cleaned:
+            cleaned = cleaned.split(":", 1)[0]
+        parts = [p for p in cleaned.split('.') if p and p != 'www']
+        if not parts:
+            return domain.title()
+
+        # Drop common TLD components (handles multi-part like co.uk)
+        tld_tokens = {
+            "com", "org", "net", "io", "ai", "app", "dev", "gov", "edu",
+            "co", "us", "uk", "ca", "au", "de", "jp", "tech", "info",
+        }
+        while len(parts) > 1 and parts[-1] in tld_tokens:
+            parts.pop()
+
+        base = parts[-1]
+        return base.replace('-', ' ').replace('_', ' ').title()

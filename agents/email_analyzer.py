@@ -1,5 +1,6 @@
 from typing import List, Dict, Any
 import asyncio
+import base64
 from email.utils import parseaddr
 import openai
 
@@ -70,6 +71,18 @@ def _extract_subject_from_thread(thread_data: Dict) -> str:
     return ""
 
 
+def _decode_body(data: str) -> str:
+    """Decode Gmail API base64url bodies into text."""
+    if not isinstance(data, str) or not data:
+        return ""
+    try:
+        padded = data + "=" * (-len(data) % 4)
+        decoded = base64.urlsafe_b64decode(padded.encode("utf-8"))
+        return decoded.decode("utf-8", errors="ignore")
+    except Exception:
+        return data
+
+
 def _extract_content_from_thread(thread_data: Dict) -> str:
     try:
         messages = thread_data.get("messages") or []
@@ -83,21 +96,25 @@ def _extract_content_from_thread(thread_data: Dict) -> str:
                 if p.get("mimeType") == "text/plain":
                     body = p.get("body", {}).get("data")
                     if isinstance(body, str) and body:
-                        return body
+                        decoded = _decode_body(body)
+                        if decoded:
+                            return decoded
     except Exception:
         pass
     for field in ['content', 'body', 'snippet', 'text', 'message']:
         if thread_data.get(field):
             content = thread_data[field]
             if isinstance(content, str) and content:
-                return content
+                decoded = _decode_body(content)
+                return decoded or content
     if 'messages' in thread_data and thread_data['messages']:
         first_message = thread_data['messages'][0]
         for field in ['content', 'body', 'snippet', 'text', 'message']:
             if first_message.get(field):
                 content = first_message[field]
                 if isinstance(content, str) and content:
-                    return content
+                    decoded = _decode_body(content)
+                    return decoded or content
     return thread_data.get('snippet', '')
 
 
@@ -118,12 +135,24 @@ class EmailAnalyzer:
             return EmailInsight(total_emails=0, interview_related=[], key_insights=[], important_contacts=[])
 
         detailed: List[Dict[str, Any]] = []
-        for th in threads[: self.config.max_emails_to_analyze]:
-            tid = th.get('id')
-            if not tid:
-                continue
-            td = await self.gmail.get_thread(tid, user_id=user_id)
-            detailed.append(td)
+        ids = [th.get('id') for th in threads[: self.config.max_emails_to_analyze] if th.get('id')]
+
+        if ids:
+            concurrency = max(1, int(getattr(self.config, "gmail_fetch_concurrency", 5)))
+            semaphore = asyncio.Semaphore(concurrency)
+
+            async def _fetch(tid: str):
+                async with semaphore:
+                    return await self.gmail.get_thread(tid, user_id=user_id)
+
+            tasks = [asyncio.create_task(_fetch(tid)) for tid in ids]
+            for result in await asyncio.gather(*tasks, return_exceptions=True):
+                if isinstance(result, Exception):
+                    if self.debug:
+                        print(f"⚠️  Failed to fetch thread: {result}")
+                    continue
+                if isinstance(result, dict):
+                    detailed.append(result)
 
         compact = [
             {
@@ -159,7 +188,6 @@ class EmailAnalyzer:
 
         content = "{}"
         try:
-            import asyncio
             with self.logger.timed(step="act:llm_email_classify", tool="OpenAI.ChatCompletions") as t:
                 completion = await asyncio.to_thread(
                     self.openai.chat.completions.create,
