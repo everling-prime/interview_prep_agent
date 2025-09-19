@@ -17,16 +17,42 @@ interview_prep_agent/
 │   ├── email_analyzer.py
 │   ├── web_researcher.py
 │   └── prep_coach.py
+│   └── discovery.py
 ├── models/
 │   └── data_models.py
 ├── output/
 │   └── prep_reports/        # .gitignored except .gitkeep
+├── tools/
+│   ├── gmail.py
+│   ├── firecrawl.py
+│   ├── search.py
+│   └── executor.py
+├── utils/
+│   ├── logging.py
+│   ├── validators.py
+│   ├── auth.py
+│   └── schema.py
 ├── config.py
 ├── main.py
 ├── pyproject.toml
 ├── uv.lock
 └── README.md
 ```
+
+## Architecture
+
+- Agents:
+  - `email_analyzer.py`: Gmail via Arcade + LLM JSON extraction to classify interview‑related emails and contacts.
+  - `web_researcher.py`: Orchestrates discovery and scraping to get canonical company pages.
+  - `discovery.py`: Merges Firecrawl site mapping + Google search, then uses an LLM to pick the best URLs (about/team/careers).
+- Tools:
+  - `gmail.py`, `firecrawl.py`, `search.py`: Thin wrappers over Arcade toolkits with uniform execution + logging via `executor.py`.
+- Utils:
+  - `logging.py`: Structured JSON logs with `run_id`, `step`, `tool`, `outcome`, `duration_ms` (+extra).
+  - `validators.py`: URL/domain sanitation and normalization.
+  - `auth.py`: Client factories for Arcade and OpenAI.
+- Agent Loop:
+  - Explicit perceive → decide → act (tool) → reflect → next, with structured logs at each step.
 
 ## Requirements
 
@@ -76,6 +102,7 @@ Common flags:
 
 - `--debug` – verbose logs
 - `--email-only` – skip web scraping
+- `--fast-web` – faster web discovery/scrape (fewer calls, no crawl fallback)
 - `--save-to-docs` – create a Google Doc via Arcade
 - `--docs-only` – only save to Google Docs (no local file)
 - `--output-dir PATH` – change local output directory (default: `output/prep_reports`)
@@ -97,9 +124,10 @@ uv run python main.py --company stripe.com --user-id you@example.com --save-to-d
 
 ## Notes on web research
 
-- The web researcher focuses on a small set of canonical pages: the homepage plus `/about` or `/company`, `/careers`, and `/blog` (if present).
-- For a simpler demo, external search is disabled; the intelligence is derived from these pages.
-- 404s and minor parsing issues are skipped gracefully.
+- Discovery combines Firecrawl site mapping and GoogleSearch to find canonical pages (about, team/leadership, careers).
+- An LLM ranks and selects the best candidates, then we scrape via Firecrawl.ScrapeUrl (markdown).
+- Debug mode and `--fast-web` keep calls minimal (1 map + 1 search; scrape up to 2 pages; no crawl fallback). Full mode maps + searches more broadly, and may use a tiny crawl fallback if needed.
+- 404s and minor parsing issues are skipped gracefully; URLs are sanitized and normalized to HTTPS.
 
 ## Output
 

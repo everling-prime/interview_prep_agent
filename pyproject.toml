@@ -16,7 +16,16 @@ authors = [
     { name = "Interview Prep Agent Contributors" }
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+]
+
 [project.urls]
 # Update these with your actual repository URL before publishing
 Homepage = "https://github.com/your-username/interview-prep-agent"
 Repository = "https://github.com/your-username/interview-prep-agent"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

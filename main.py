@@ -15,10 +15,16 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:
+    # Use existing agents/ package
     from agents.email_analyzer import EmailAnalyzer
     from agents.web_researcher import WebResearcher
     from agents.prep_coach import PrepCoach
+    from tools.executor import ArcadeToolExecutor
+    from tools.gmail import GmailTool
+    from tools.firecrawl import FirecrawlTool
+    from utils.logging import EventLogger
     from config import Config
+    from arcadepy import Arcade
 except ImportError as e:
     print(f"❌ Import error: {e}")
     print("💡 Make sure you have all the required files:")
@@ -40,10 +46,13 @@ def print_demo_highlights(email_insights, web_research=None):
         if interview_count > 0:
             print(f"   ✨ Agent intelligently filtered hiring communications from routine emails")
     
-    # Web research summary  
+    # Web discovery summary
     if web_research:
         website_count = len(web_research.website_content) if web_research.website_content else 0
-        print(f"🔍 WEB: Scraped {website_count} key company pages (about, careers, blog)")
+        discovered = web_research.search_results or []
+        # If results labeled as mapped only, present as 'discovered links'
+        label = "discovered links" if discovered and all((r.get('title') == 'Mapped') for r in discovered if isinstance(r, dict)) else "search results"
+        print(f"🔍 WEB: {label}: {len(discovered)}; scraped {website_count} key pages")
     
     # AI synthesis summary
     print(f"🧠 AI: Expert interview coach synthesizing personalized recommendations")
@@ -68,6 +77,8 @@ Examples:
                        help='Output directory for prep reports')
     parser.add_argument('--debug', action='store_true',
                        help='Enable debug mode with detailed logging')
+    parser.add_argument('--fast-web', action='store_true',
+                       help='Faster web discovery/scrape (fewer calls, no crawl fallback)')
     parser.add_argument('--email-only', action='store_true',
                        help='Only analyze emails, skip web research')
     parser.add_argument('--save-to-docs', action='store_true',
@@ -89,25 +100,37 @@ Examples:
         # Initialize configuration and components
         print("⚙️  Initializing configuration...")
         config = Config()
-        email_analyzer = EmailAnalyzer(config, debug=args.debug)
-        web_researcher = WebResearcher(config, debug=args.debug)
+        logger = EventLogger()
+        arcade_client = Arcade(api_key=config.arcade_api_key)
+        executor = ArcadeToolExecutor(arcade_client, logger=logger)
+        gmail_tool = GmailTool(executor, logger=logger)
+        firecrawl_tool = FirecrawlTool(executor, logger=logger)
+
+        email_analyzer = EmailAnalyzer(config, gmail=gmail_tool, logger=logger, debug=args.debug)
+        web_researcher = WebResearcher(config, firecrawl=firecrawl_tool, logger=logger, debug=(args.debug or args.fast_web))
         
-        # Step 1: Analyze emails from company
-        print("\n📧 Phase 1: Analyzing email communications...")
-        email_insights = await email_analyzer.analyze_company_emails(
-            args.company, args.user_id
-        )
-        
-        if args.debug:
-            print(f"🐛 Debug: Email insights: {email_insights}")
-        
-        # Step 2: Research company online (unless --email-only)
+        # Agent loop: perceive → decide → act → reflect → next
+        print("\n🔁 Agent loop: perceive → decide → act → reflect")
+        # Perceive
+        logger.log(step="perceive", tool="context", outcome="ok", duration_ms=0, extra={"company": args.company, "user_id": args.user_id})
+        # Decide: emails first
+        logger.log(step="decide", tool="policy", outcome="ok", duration_ms=0, extra={"next": "emails"})
+        # Act: email analysis
+        email_insights = await email_analyzer.analyze_company_emails(args.company, args.user_id)
+        logger.log(step="reflect", tool="emails", outcome="ok", duration_ms=0, extra={"total": email_insights.total_emails, "interview": len(email_insights.interview_related)})
+        # Decide: web research (optional)
         web_research = None
         if not args.email_only:
-            print(f"\n🔍 Phase 2: Researching company intelligence...")
+            logger.log(step="decide", tool="policy", outcome="ok", duration_ms=0, extra={"next": "web_research"})
             web_research = await web_researcher.research_company(args.company)
-            
-            if args.debug:
+            logger.log(step="reflect", tool="web", outcome="ok", duration_ms=0, extra={"pages": len(web_research.website_content) if web_research else 0})
+
+        if args.debug:
+            # Avoid dumping email contents; show safe summary only
+            safe_total = getattr(email_insights, 'total_emails', 0)
+            safe_interview = len(getattr(email_insights, 'interview_related', []) or [])
+            print(f"🐛 Debug: Email summary total={safe_total}, interview_related={safe_interview}")
+            if web_research:
                 print(f"🐛 Debug: Web research results: {len(web_research.search_results)} search results, {len(web_research.website_content)} pages scraped")
         
         # Show demo highlights
